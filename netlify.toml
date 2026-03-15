@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WellSched — Well Maintenance Scheduling Dashboard</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#fff;--bg1:#f5f5f3;--bg2:#eeede9;
+  --tx0:#1a1a1a;--tx1:#6b6b68;--tx2:#9e9d99;
+  --bd0:rgba(0,0,0,.09);--bd1:rgba(0,0,0,.16);--bd2:rgba(0,0,0,.26);
+  --r0:6px;--r1:8px;--r2:12px;
+  --green:#1D9E75;--grnd:#0F6E56;--grnl:#E1F5EE;
+  --blue:#378ADD;--amber:#EF9F27;--red:#E24B4A;
+  --font:system-ui,-apple-system,"Segoe UI",sans-serif
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg0:#1e1e1c;--bg1:#262624;--bg2:#2e2e2b;
+  --tx0:#e8e7e2;--tx1:#9e9d99;--tx2:#6b6b68;
+  --bd0:rgba(255,255,255,.07);--bd1:rgba(255,255,255,.13);--bd2:rgba(255,255,255,.21);
+  --grnl:#063a29
+}}
+html,body{height:100%;overflow:hidden;font-family:var(--font);font-size:13px;background:var(--bg2);color:var(--tx0);line-height:1.5}
+
+/* ── Topbar ── */
+.topbar{height:46px;background:var(--bg0);border-bottom:.5px solid var(--bd0);display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:10px;flex-shrink:0;z-index:10}
+.tb-left{display:flex;align-items:center;gap:14px}
+.tb-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.logo{font-size:15px;font-weight:700;letter-spacing:-.5px}
+.logo span{color:var(--green)}
+.wklbl{font-size:11px;color:var(--tx1)}
+
+/* ── Buttons ── */
+.btn{font-family:var(--font);font-size:11px;padding:5px 11px;border-radius:var(--r1);border:.5px solid var(--bd1);background:transparent;color:var(--tx0);cursor:pointer;white-space:nowrap;transition:background .12s}
+.btn:hover{background:var(--bg1)}
+.btn:active{transform:scale(.98)}
+.btn-green{background:var(--green);color:#fff;border-color:var(--grnd)}
+.btn-green:hover{background:var(--grnd)}
+.btn-amber{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.btn-amber:hover{background:#FAC775}
+
+/* ── Main ── */
+.main{display:flex;height:calc(100vh - 46px);overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:206px;min-width:206px;background:var(--bg0);border-right:.5px solid var(--bd0);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.sb-sec{padding:11px 12px;border-bottom:.5px solid var(--bd0)}
+.sb-lbl{font-size:10px;color:var(--tx1);text-transform:uppercase;letter-spacing:.6px;font-weight:600;margin-bottom:8px}
+.team-chip{padding:7px 9px;border-radius:var(--r1);border:.5px solid var(--bd0);margin-bottom:5px;background:var(--bg1)}
+.team-chip:last-child{margin-bottom:0}
+.tc-name{font-size:11px;font-weight:600}
+.tc-meta{font-size:10px;color:var(--tx1);margin-top:1px}
+.cap-bar{height:3px;border-radius:2px;margin-top:5px;background:var(--bd0)}
+.cap-fill{height:100%;border-radius:2px;transition:width .3s,background .3s}
+.stat-row{display:flex;gap:5px;margin-bottom:6px}
+.stat-row:last-child{margin-bottom:0}
+.stat-c{flex:1;padding:6px;border-radius:var(--r1);background:var(--bg1);border:.5px solid var(--bd0)}
+.stat-v{font-size:16px;font-weight:600;line-height:1}
+.stat-l{font-size:9px;color:var(--tx1);margin-top:2px}
+.tl-row{display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.tl-lbl{font-size:9px;color:var(--tx1);width:44px;flex-shrink:0}
+.tl-slots{display:flex;gap:1px;flex:1}
+.tl-slot{flex:1;height:12px;border-radius:2px;border:.5px solid var(--bd0);background:var(--bg1)}
+.tl-slot.occ{background:#9FE1CB;border-color:#5DCAA5}
+.tl-slot.now{background:#FAC775;border-color:#EF9F27}
+.tl-hrs{display:flex;margin-left:48px;gap:1px}
+.tl-h{flex:1;font-size:8px;color:var(--tx2);text-align:center}
+.jt-ref{font-size:10px;color:var(--tx1);line-height:2.1}
+.jt-row{display:flex;justify-content:space-between}
+.rule-list{font-size:10px;color:var(--tx1);line-height:2.1}
+
+/* ── Board wrap ── */
+.board-wrap{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.board{flex:1;display:flex;gap:10px;padding:12px;overflow-x:auto;min-height:0}
+.col-wrap{min-width:272px;flex:1;display:flex;flex-direction:column;min-height:0}
+.col-head{background:var(--bg0);border:.5px solid var(--bd0);border-bottom:none;border-radius:var(--r2) var(--r2) 0 0;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.col-head-l{display:flex;align-items:center;gap:7px}
+.col-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.col-title{font-size:12px;font-weight:600}
+.col-cnt{font-size:10px;background:var(--bg1);color:var(--tx1);padding:2px 7px;border-radius:9px;border:.5px solid var(--bd0)}
+.col-body{background:var(--bg1);border:.5px solid var(--bd0);border-top:none;border-radius:0 0 var(--r2) var(--r2);padding:6px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:5px;transition:background .15s,border-color .15s}
+.col-body.dv{background:var(--grnl);border-color:#5DCAA5}
+
+/* ── Job card ── */
+.job-card{background:var(--bg0);border:.5px solid var(--bd0);border-radius:var(--r1);padding:9px 11px;cursor:grab;position:relative;transition:border-color .12s,opacity .12s;user-select:none;flex-shrink:0}
+.job-card:hover{border-color:var(--bd1)}
+.job-card:active{cursor:grabbing}
+.job-card.dragging{opacity:.3}
+.job-card.dot{border-top:2px solid var(--green)}
+.job-card.dob{border-bottom:2px solid var(--green)}
+.job-card.violated{border-color:var(--red);background:#fff5f5}
+@media(prefers-color-scheme:dark){.job-card.violated{background:#2a1515}}
+@keyframes flash-green{0%{background:#E1F5EE}100%{background:var(--bg0)}}
+.job-card.reopt{animation:flash-green .45s ease}
+@keyframes flash-red{0%,100%{background:#FCEBEB}50%{background:#F7C1C1}}
+.job-card.flash-viol{animation:flash-red .5s ease}
+
+.pbar{height:2.5px;border-radius:2px;margin-bottom:7px}
+.rank-pill{position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;border:.5px solid}
+.jid{font-size:9px;color:var(--tx2);margin-bottom:1px}
+.jtitle{font-size:11px;font-weight:600;line-height:1.3;padding-right:28px}
+.well-stats{display:flex;gap:3px;margin:5px 0}
+.ws{flex:1;text-align:center;padding:3px 1px;border-radius:var(--r0);background:var(--bg1);border:.5px solid var(--bd0)}
+.wsv{font-size:10px;font-weight:600}
+.wsl{font-size:8px;color:var(--tx1)}
+.jmeta{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px}
+.badge{font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;white-space:nowrap}
+.bc{background:#FCEBEB;color:#A32D2D}
+.bh{background:#FAECE7;color:#993C1D}
+.bm{background:#FAEEDA;color:#854F0B}
+.bl{background:#EAF3DE;color:#3B6D11}
+.bn{background:var(--bg1);color:var(--tx1);border:.5px solid var(--bd0)}
+@media(prefers-color-scheme:dark){
+  .bc{background:#3a1515;color:#F09595}
+  .bh{background:#3a2010;color:#F0997B}
+  .bm{background:#352810;color:#FAC775}
+  .bl{background:#1a2e10;color:#97C459}
+}
+.jfoot{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.jft{display:flex;align-items:center;gap:5px}
+.av{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0}
+.avA{background:#9FE1CB;color:#085041}
+.avB{background:#B5D4F4;color:#0C447C}
+.avC{background:#F5C4B3;color:#712B13}
+.avD{background:#CECBF6;color:#26215C}
+.avE{background:#F4C0D1;color:#72243E}
+.ewarn{font-size:10px;color:#993C1D;background:#FAECE7;padding:2px 6px;border-radius:var(--r0);margin-top:3px}
+@media(prefers-color-scheme:dark){.ewarn{background:#3a2010;color:#F0997B}}
+.drop-ghost{height:56px;border-radius:var(--r1);border:1.5px dashed #5DCAA5;background:var(--grnl);flex-shrink:0}
+
+/* ── Constraint bar ── */
+.cbar{background:var(--bg0);border-top:.5px solid var(--bd0);padding:7px 12px;flex-shrink:0}
+.cbar-title{font-size:10px;color:var(--tx1);font-weight:600;margin-bottom:5px}
+.cbar-row{display:flex;gap:5px;flex-wrap:wrap}
+.chip{padding:2px 8px;border-radius:var(--r0);font-size:10px;border:.5px solid}
+.chip-ok{background:#E1F5EE;color:#085041;border-color:#5DCAA5}
+.chip-warn{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.chip-err{background:#FCEBEB;color:#A32D2D;border-color:#F09595}
+@media(prefers-color-scheme:dark){
+  .chip-ok{background:#063a29;color:#9FE1CB;border-color:#0F6E56}
+  .chip-warn{background:#352810;color:#FAC775;border-color:#854F0B}
+  .chip-err{background:#3a1515;color:#F09595;border-color:#A32D2D}
+}
+.olog{background:var(--bg0);border-top:.5px solid var(--bd0);padding:5px 12px;font-size:10px;color:var(--tx1);max-height:42px;overflow-y:auto;line-height:1.7;flex-shrink:0}
+
+/* ── Modal ── */
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal-ov.hidden{display:none}
+.modal{background:var(--bg0);border:.5px solid var(--bd1);border-radius:var(--r2);width:410px;max-width:100%;max-height:90vh;overflow-y:auto}
+.mh{padding:12px 14px;border-bottom:.5px solid var(--bd0);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--bg0);z-index:1}
+.mh-title{font-size:13px;font-weight:600}
+.mclose{background:none;border:none;font-size:20px;cursor:pointer;color:var(--tx1);padding:0 4px;line-height:1}
+.mclose:hover{color:var(--tx0)}
+.mbody{padding:14px}
+.mfoot{padding:10px 14px;border-top:.5px solid var(--bd0);display:flex;justify-content:flex-end;gap:7px;position:sticky;bottom:0;background:var(--bg0)}
+.field{margin-bottom:10px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:11px;color:var(--tx1);display:block;margin-bottom:3px}
+.field input,.field select{width:100%;padding:7px 9px;font-size:12px;border:.5px solid var(--bd1);border-radius:var(--r1);background:var(--bg0);color:var(--tx0);font-family:var(--font);transition:border-color .12s}
+.field input:focus,.field select:focus{outline:none;border-color:var(--green)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.score-prev{padding:9px 11px;border-radius:var(--r1);background:var(--bg1);border:.5px solid var(--bd0);margin-top:10px}
+.sp-lbl{font-size:10px;color:var(--tx1);margin-bottom:6px}
+.sp-row{display:flex;gap:6px}
+.sp-it{flex:1;text-align:center}
+.sp-v{font-size:15px;font-weight:700}
+.sp-l{font-size:9px;color:var(--tx1)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg0);border:.5px solid var(--bd1);border-radius:var(--r1);padding:9px 14px;font-size:12px;z-index:200;max-width:320px;animation:tin .2s ease}
+.toast.hidden{display:none}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd1);border-radius:3px}
+
+@media(max-width:768px){.sidebar{display:none}.board{padding:8px;gap:8px}.col-wrap{min-width:240px}.wklbl{display:none}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-left">
+    <div class="logo">Well<span>Sched</span></div>
+    <div class="wklbl" id="wklbl"></div>
+  </div>
+  <div class="tb-right">
+    <select class="btn" id="sel-filter">
+      <option value="all">All priorities</option>
+      <option value="crit">Critical</option>
+      <option value="high">High+</option>
+      <option value="med">Medium+</option>
+    </select>
+    <select class="btn" id="sel-team"><option value="all">All teams</option></select>
+    <button class="btn btn-amber" id="btn-reopt">&#8635; Reoptimize all</button>
+    <button class="btn btn-green" id="btn-newjob">+ New job</button>
+    <button class="btn" id="btn-newteam">+ Add team</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-sec">
+      <div class="sb-lbl">Teams</div>
+      <div id="team-list"></div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">This week</div>
+      <div class="stat-row">
+        <div class="stat-c"><div class="stat-v" id="s-tot">0</div><div class="stat-l">Total jobs</div></div>
+        <div class="stat-c"><div class="stat-v" id="s-done">0</div><div class="stat-l">Completed</div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-c"><div class="stat-v" id="s-conf" style="color:var(--red)">0</div><div class="stat-l">Conflicts</div></div>
+        <div class="stat-c"><div class="stat-v" id="s-util">0%</div><div class="stat-l">Utilization</div></div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Today's timeline</div>
+      <div id="timeline"></div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Job types</div>
+      <div class="jt-ref">
+        <div class="jt-row"><span>Job A — Inspection</span><span>1 hr</span></div>
+        <div class="jt-row"><span>Job B — Maintenance</span><span>3 hrs</span></div>
+        <div class="jt-row"><span>Job C — Overhaul</span><span>4 hrs</span></div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Optimizer rules</div>
+      <div class="rule-list">
+        <div>1. Priority score order</div>
+        <div>2. 8 h/day capacity cap</div>
+        <div>3. Equipment conflicts</div>
+        <div>4. Distance proximity</div>
+        <div>5. Downtime weighting</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- BOARD -->
+  <div class="board-wrap">
+    <div class="board" id="board">
+
+      <div class="col-wrap">
+        <div class="col-head">
+          <div class="col-head-l"><div class="col-dot" style="background:#378ADD"></div><span class="col-title">Assigned</span></div>
+          <span class="col-cnt" id="cnt-assigned">0</span>
+        </div>
+        <div class="col-body" id="col-assigned" data-col="assigned"></div>
+      </div>
+
+      <div class="col-wrap">
+        <div class="col-head">
+          <div class="col-head-l"><div class="col-dot" style="background:#EF9F27"></div><span class="col-title">In progress</span></div>
+          <span class="col-cnt" id="cnt-progress">0</span>
+        </div>
+        <div class="col-body" id="col-progress" data-col="progress"></div>
+      </div>
+
+      <div class="col-wrap">
+        <div class="col-head">
+          <div class="col-head-l"><div class="col-dot" style="background:#1D9E75"></div><span class="col-title">Completed</span></div>
+          <span class="col-cnt" id="cnt-completed">0</span>
+        </div>
+        <div class="col-body" id="col-completed" data-col="completed"></div>
+      </div>
+
+    </div>
+
+    <div class="cbar">
+      <div class="cbar-title">Live constraint status</div>
+      <div class="cbar-row" id="cbar-row"></div>
+    </div>
+    <div class="olog" id="olog">Optimizer ready — drag cards to reorder and trigger reoptimization.</div>
+  </div>
+</div>
+
+<!-- JOB MODAL -->
+<div id="modal-job" class="modal-ov hidden">
+  <div class="modal">
+    <div class="mh"><span class="mh-title">New job</span><button class="mclose" data-close="modal-job">&times;</button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="field"><label>Well ID</label><input id="f-well" value="Well-50"/></div>
+        <div class="field"><label>Gathering centre</label><select id="f-gc"><option>GC-1</option><option>GC-2</option><option>GC-3</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Production (bbl/d)</label><input id="f-prod" type="number" value="4800"/></div>
+        <div class="field"><label>GC contribution (%)</label><input id="f-contrib" type="number" value="16"/></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Back pressure (bar)</label><input id="f-bp" type="number" step="0.1" value="3.2"/></div>
+        <div class="field"><label>Downtime (hrs)</label><input id="f-dt" type="number" value="8"/></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Job type</label>
+          <select id="f-jt"><option value="A">Job A — Inspection (1 hr)</option><option value="B">Job B — Maintenance (3 hrs)</option><option value="C">Job C — Overhaul (4 hrs)</option></select>
+        </div>
+        <div class="field"><label>Assign to team</label><select id="f-team"></select></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Scheduled day</label>
+          <select id="f-day"><option>Sat</option><option>Sun</option><option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option></select>
+        </div>
+        <div class="field"><label>Distance from team (km)</label><input id="f-dist" type="number" value="12"/></div>
+      </div>
+      <div class="field"><label>Equipment required (leave blank if none)</label><input id="f-equip" placeholder="e.g. Compressor, Crane…"/></div>
+      <div class="score-prev">
+        <div class="sp-lbl">Priority score preview</div>
+        <div class="sp-row">
+          <div class="sp-it"><div class="sp-v" id="sp-tot">—</div><div class="sp-l">Score</div></div>
+          <div class="sp-it"><div class="sp-v" id="sp-prod">—</div><div class="sp-l">Prod</div></div>
+          <div class="sp-it"><div class="sp-v" id="sp-gc">—</div><div class="sp-l">GC</div></div>
+          <div class="sp-it"><div class="sp-v" id="sp-bp">—</div><div class="sp-l">BP</div></div>
+          <div class="sp-it"><div class="sp-v" id="sp-dt">—</div><div class="sp-l">DT</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" data-close="modal-job">Cancel</button>
+      <button class="btn btn-green" id="btn-addjob">Add &amp; optimize</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEAM MODAL -->
+<div id="modal-team" class="modal-ov hidden">
+  <div class="modal">
+    <div class="mh"><span class="mh-title">Add team</span><button class="mclose" data-close="modal-team">&times;</button></div>
+    <div class="mbody">
+      <div class="field"><label>Team name</label><input id="t-name" placeholder="e.g. Team Delta"/></div>
+      <div class="frow">
+        <div class="field"><label>Members</label><input id="t-members" type="number" value="4"/></div>
+        <div class="field"><label>Base GC</label><select id="t-gc"><option>GC-1</option><option>GC-2</option><option>GC-3</option></select></div>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" data-close="modal-team">Cancel</button>
+      <button class="btn btn-green" id="btn-saveteam">Add team</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DATA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const DAYS     = ['Sat','Sun','Mon','Tue','Wed','Thu'];
+const GC_AVG   = 3800;
+const MAX_HRS  = 8;
+const WORK_ST  = 7;
+const JT = {
+  A:{label:'Job A — Inspection', hrs:1},
+  B:{label:'Job B — Maintenance',hrs:3},
+  C:{label:'Job C — Overhaul',   hrs:4}
+};
+const AV_CLS = ['avA','avB','avC','avD','avE'];
+
+let TEAMS = [
+  {id:'A',name:'Alpha',  members:4, av:'avA', base:'GC-1'},
+  {id:'B',name:'Bravo',  members:3, av:'avB', base:'GC-2'},
+  {id:'C',name:'Charlie',members:5, av:'avC', base:'GC-3'}
+];
+
+let jobs = [
+  {id:'J001',well:'Well-14',gc:'GC-1',jt:'B',team:'A',status:'assigned', prod:4200,contrib:18,bp:3.2,dt:12,dist:8, equip:null,         day:'Sat'},
+  {id:'J002',well:'Well-07',gc:'GC-1',jt:'C',team:'A',status:'progress', prod:6800,contrib:28,bp:5.1,dt:4, dist:5, equip:null,         day:'Sat'},
+  {id:'J003',well:'Well-22',gc:'GC-2',jt:'A',team:'B',status:'assigned', prod:1900,contrib:9, bp:1.8,dt:31,dist:12,equip:null,         day:'Sun'},
+  {id:'J004',well:'Well-31',gc:'GC-2',jt:'B',team:'B',status:'assigned', prod:5500,contrib:22,bp:4.0,dt:6, dist:15,equip:'Compressor', day:'Sun'},
+  {id:'J005',well:'Well-05',gc:'GC-3',jt:'C',team:'C',status:'progress', prod:7200,contrib:30,bp:5.8,dt:2, dist:3, equip:null,         day:'Sat'},
+  {id:'J006',well:'Well-19',gc:'GC-3',jt:'A',team:'C',status:'completed',prod:3100,contrib:13,bp:2.5,dt:8, dist:20,equip:null,         day:'Sat'},
+  {id:'J007',well:'Well-42',gc:'GC-1',jt:'B',team:'A',status:'assigned', prod:2800,contrib:12,bp:3.8,dt:22,dist:18,equip:null,         day:'Mon'},
+  {id:'J008',well:'Well-11',gc:'GC-2',jt:'A',team:'B',status:'assigned', prod:5100,contrib:21,bp:4.5,dt:3, dist:9, equip:null,         day:'Sat'}
+];
+
+// Manual order overrides: {col: {jobId: index}}
+const OM = {assigned:{},progress:{},completed:{}};
+let opLog = [];
+let jCounter = jobs.length + 1;
+const nextId = () => 'J' + String(jCounter++).padStart(3,'0');
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   OPTIMIZER / SCORING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function calcScore(j) {
+  let s = 0;
+  s += Math.min(40, (j.prod / 10000) * 40);          // production
+  s += Math.min(20, (j.contrib / 30) * 20);           // GC contribution
+  s += Math.min(15, (j.bp / 6) * 15);                 // back pressure
+  if (j.prod < GC_AVG && j.dt > 15) s += 10;          // high-DT bonus
+  s += Math.min(10, Math.max(0,(1 - j.dist/50)*10));  // proximity
+  if (j.equip) s -= 5;                                 // equipment penalty
+  return Math.round(Math.max(0, Math.min(100, s)));
+}
+
+function pClass(sc) {
+  if (sc >= 75) return 'bc';
+  if (sc >= 55) return 'bh';
+  if (sc >= 35) return 'bm';
+  return 'bl';
+}
+function pLabel(sc) {
+  if (sc >= 75) return 'Critical';
+  if (sc >= 55) return 'High';
+  if (sc >= 35) return 'Medium';
+  return 'Low';
+}
+function pColor(sc) {
+  if (sc >= 75) return '#E24B4A';
+  if (sc >= 55) return '#D85A30';
+  if (sc >= 35) return '#BA7517';
+  return '#639922';
+}
+function pRankBg(sc) {
+  if (sc >= 75) return ['#FCEBEB','#A32D2D'];
+  if (sc >= 55) return ['#FAECE7','#712B13'];
+  if (sc >= 35) return ['#FAEEDA','#633806'];
+  return ['#EAF3DE','#27500A'];
+}
+
+function getViolations(j) {
+  const v = [];
+  const used = jobs.filter(x => x.team===j.team && x.day===j.day && x.status!=='completed' && x.id!==j.id)
+                    .reduce((s,x)=>s+JT[x.jt].hrs, 0);
+  if (used + JT[j.jt].hrs > MAX_HRS)
+    v.push(`Team ${j.team} over capacity on ${j.day}`);
+  if (j.equip) v.push(`Equipment pending: ${j.equip}`);
+  return v;
+}
+
+function detectCapViolations() {
+  const issues = [];
+  TEAMS.forEach(t => {
+    DAYS.forEach(d => {
+      const hrs = jobs.filter(j=>j.team===t.id&&j.day===d&&j.status!=='completed')
+                      .reduce((s,j)=>s+JT[j.jt].hrs, 0);
+      if (hrs > MAX_HRS) issues.push(`Team ${t.name}: ${hrs}h on ${d} (max ${MAX_HRS}h)`);
+    });
+  });
+  return issues;
+}
+
+function getOrdered(col, filter, teamF) {
+  let list = jobs.filter(j => {
+    if (j.status !== col) return false;
+    if (teamF !== 'all' && j.team !== teamF) return false;
+    const sc = calcScore(j);
+    if (filter === 'crit') return sc >= 75;
+    if (filter === 'high') return sc >= 55;
+    if (filter === 'med')  return sc >= 35;
+    return true;
+  });
+  list.sort((a,b) => {
+    const oa = OM[col][a.id] ?? Infinity;
+    const ob = OM[col][b.id] ?? Infinity;
+    if (oa !== Infinity || ob !== Infinity) {
+      if (oa !== ob) return oa - ob;
+    }
+    return calcScore(b) - calcScore(a);
+  });
+  return list;
+}
+
+function reoptAfterDrop(col, anchorId) {
+  const anchor = jobs.find(j=>j.id===anchorId);
+  const asc    = calcScore(anchor);
+  const apos   = OM[col][anchorId] ?? 0;
+  const all    = getOrdered(col,'all','all');
+
+  // Flash any violations
+  all.filter(j=>getViolations(j).length).forEach(j=>{
+    const el = document.getElementById('card-'+j.id);
+    if (el) { el.classList.add('flash-viol'); setTimeout(()=>el.classList.remove('flash-viol'),600); }
+  });
+
+  // Place unordered cards around anchor by score
+  const unplaced = all.filter(j=>j.id!==anchorId && OM[col][j.id]===undefined);
+  const above = unplaced.filter(j=>calcScore(j)>asc).sort((a,b)=>calcScore(b)-calcScore(a));
+  const below = unplaced.filter(j=>calcScore(j)<=asc).sort((a,b)=>calcScore(b)-calcScore(a));
+  above.forEach((j,i)=>{ OM[col][j.id]=i; });
+  below.forEach((j,i)=>{ OM[col][j.id]=apos+1+i; });
+}
+
+function fullReopt() {
+  jobs.filter(j=>j.status!=='completed').forEach(j=>{ delete OM[j.status][j.id]; });
+  ['assigned','progress'].forEach(col=>{
+    getOrdered(col,'all','all').sort((a,b)=>calcScore(b)-calcScore(a))
+      .forEach((j,i)=>{ OM[col][j.id]=i; });
+  });
+  log('Full reoptimization — manual overrides cleared, board sorted by score');
+}
+
+function log(msg) {
+  const ts = new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  opLog.unshift(`[${ts}] ${msg}`);
+  if (opLog.length > 30) opLog.pop();
+  const el = document.getElementById('olog');
+  if (el) el.textContent = opLog.join('  ·  ');
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RENDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function buildCard(j, rank) {
+  const sc    = calcScore(j);
+  const team  = TEAMS.find(t=>t.id===j.team) || TEAMS[0];
+  const viols = getViolations(j);
+  const [rbg, rcol] = pRankBg(sc);
+  const pc    = pColor(sc);
+  const tags  = [];
+  if (j.prod > GC_AVG)              tags.push({t:'High prod',c:'bh'});
+  if (j.prod < GC_AVG && j.dt > 15) tags.push({t:'High DT',  c:'bm'});
+  if (j.bp > 4.5)                    tags.push({t:'High BP',  c:'bc'});
+
+  const el = document.createElement('div');
+  el.className = 'job-card' + (viols.length ? ' violated' : '');
+  el.id = 'card-' + j.id;
+  el.draggable = true;
+  el.dataset.id = j.id;
+  el.innerHTML = `
+    <div class="pbar" style="background:${pc}"></div>
+    <div class="rank-pill" style="background:${rbg};color:${rcol};border-color:${pc}">#${rank+1}</div>
+    <div class="jid">${j.id} &middot; ${j.gc}</div>
+    <div class="jtitle">${j.well} &mdash; ${JT[j.jt].label}</div>
+    <div class="well-stats">
+      <div class="ws"><div class="wsv">${(j.prod/1000).toFixed(1)}k</div><div class="wsl">bbl/d</div></div>
+      <div class="ws"><div class="wsv">${j.contrib}%</div><div class="wsl">GC</div></div>
+      <div class="ws"><div class="wsv">${j.bp.toFixed(1)}</div><div class="wsl">BP</div></div>
+      <div class="ws"><div class="wsv">${j.dist}km</div><div class="wsl">dist</div></div>
+      <div class="ws"><div class="wsv">${j.dt}h</div><div class="wsl">DT</div></div>
+    </div>
+    <div class="jmeta">
+      ${tags.map(t=>`<span class="badge ${t.c}">${t.t}</span>`).join('')}
+      <span class="badge bn">${j.day} ${String(WORK_ST).padStart(2,'0')}:00</span>
+      <span class="badge bn">${JT[j.jt].hrs}h</span>
+    </div>
+    ${viols.length ? `<div class="ewarn">&#9888; ${viols[0]}</div>` : ''}
+    <div class="jfoot">
+      <div class="jft">
+        <div class="av ${team.av}">${team.id}</div>
+        <span style="font-size:10px;color:var(--tx1)">Team ${team.name}</span>
+      </div>
+      <span class="badge ${pClass(sc)}">${pLabel(sc)} &middot; ${sc}</span>
+    </div>`;
+  return el;
+}
+
+function renderAll() {
+  const filter = document.getElementById('sel-filter').value;
+  const teamF  = document.getElementById('sel-team').value;
+  ['assigned','progress','completed'].forEach(col=>{
+    const body = document.getElementById('col-'+col);
+    body.innerHTML = '';
+    const list = getOrdered(col, filter, teamF);
+    list.forEach((j,i) => body.appendChild(buildCard(j,i)));
+    document.getElementById('cnt-'+col).textContent = list.length;
+  });
+  renderSidebar();
+  renderConstraints();
+  renderTimeline();
+}
+
+function renderSidebar() {
+  document.getElementById('team-list').innerHTML = TEAMS.map(t=>{
+    const active = jobs.filter(j=>j.team===t.id&&j.status!=='completed');
+    const hrs    = active.reduce((s,j)=>s+JT[j.jt].hrs,0);
+    const pct    = Math.min(100,Math.round(hrs/MAX_HRS*100));
+    const col    = pct>=100?'#E24B4A':pct>=75?'#EF9F27':'#1D9E75';
+    return `<div class="team-chip">
+      <div class="tc-name">Team ${t.name}</div>
+      <div class="tc-meta">${t.members} members &middot; ${hrs}h/${MAX_HRS}h &middot; ${t.base}</div>
+      <div class="cap-bar"><div class="cap-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('s-tot').textContent  = jobs.length;
+  document.getElementById('s-done').textContent = jobs.filter(j=>j.status==='completed').length;
+  document.getElementById('s-conf').textContent = jobs.filter(j=>getViolations(j).length>0).length;
+  const ah = jobs.filter(j=>j.status!=='completed').reduce((s,j)=>s+JT[j.jt].hrs,0);
+  document.getElementById('s-util').textContent = Math.round(ah/(TEAMS.length*MAX_HRS*DAYS.length)*100)+'%';
+}
+
+function renderConstraints() {
+  const chips  = [];
+  const issues = detectCapViolations();
+  if (!issues.length) chips.push({t:'All capacity OK',c:'chip-ok'});
+  else issues.forEach(i=>chips.push({t:i,c:'chip-err'}));
+  const eq = jobs.filter(j=>j.equip&&j.status!=='completed').length;
+  chips.push(eq===0
+    ? {t:'All equipment available',c:'chip-ok'}
+    : {t:`${eq} equipment conflict${eq>1?'s':''}`,c:'chip-warn'});
+  const sc = jobs.filter(j=>j.status!=='completed').map(j=>calcScore(j));
+  const avg = sc.length ? Math.round(sc.reduce((a,b)=>a+b,0)/sc.length) : 0;
+  chips.push({t:`Avg score: ${avg}`, c: avg>=55?'chip-ok':'chip-warn'});
+  document.getElementById('cbar-row').innerHTML =
+    chips.map(c=>`<span class="chip ${c.c}">${c.t}</span>`).join('');
+}
+
+function renderTimeline() {
+  const hours = [7,8,9,10,11,12,13,14];
+  const today = DAYS[0];
+  const rows  = TEAMS.map(t=>{
+    const tj = jobs.filter(j=>j.team===t.id&&j.day===today&&j.status!=='completed');
+    const slots = hours.map(h=>{
+      const occ = tj.find(j=>h>=WORK_ST&&h<WORK_ST+JT[j.jt].hrs);
+      return `<div class="tl-slot${occ?' occ':h===WORK_ST?' now':''}"></div>`;
+    }).join('');
+    return `<div class="tl-row"><div class="tl-lbl">${t.name.slice(0,5)}</div><div class="tl-slots">${slots}</div></div>`;
+  }).join('');
+  const hlbls = hours.map(h=>`<div class="tl-h">${h}</div>`).join('');
+  document.getElementById('timeline').innerHTML = rows + `<div class="tl-hrs">${hlbls}</div>`;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   DRAG & DROP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let drag = {id:null, srcCol:null};
+
+function flashReopt(col, exceptId) {
+  setTimeout(()=>{
+    getOrdered(col,'all','all').forEach(j=>{
+      if (j.id===exceptId) return;
+      const el = document.getElementById('card-'+j.id);
+      if (el) { el.classList.add('reopt'); setTimeout(()=>el.classList.remove('reopt'),500); }
+    });
+  },60);
+}
+
+const board = document.getElementById('board');
+
+board.addEventListener('dragstart', e=>{
+  const card = e.target.closest('.job-card');
+  if (!card) return;
+  const j = jobs.find(x=>x.id===card.dataset.id);
+  if (!j) return;
+  drag.id = j.id; drag.srcCol = j.status;
+  card.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', j.id);
+});
+
+board.addEventListener('dragend', e=>{
+  document.querySelectorAll('.job-card').forEach(c=>c.classList.remove('dragging','dot','dob'));
+  document.querySelectorAll('.col-body').forEach(b=>{ b.classList.remove('dv'); b.querySelectorAll('.drop-ghost').forEach(g=>g.remove()); });
+  drag.id = null;
+});
+
+// Card-over: show top/bottom indicator
+board.addEventListener('dragover', e=>{
+  const card = e.target.closest('.job-card');
+  if (card && card.dataset.id !== drag.id) {
+    e.preventDefault(); e.stopPropagation();
+    const mid = card.getBoundingClientRect().top + card.getBoundingClientRect().height/2;
+    card.classList.toggle('dot', e.clientY < mid);
+    card.classList.toggle('dob', e.clientY >= mid);
+  }
+});
+
+board.addEventListener('dragleave', e=>{
+  const card = e.target.closest('.job-card');
+  if (card) card.classList.remove('dot','dob');
+});
+
+// Card drop: precise position
+board.addEventListener('drop', e=>{
+  const card = e.target.closest('.job-card');
+  if (!card || !drag.id || card.dataset.id===drag.id) return;
+  e.preventDefault(); e.stopPropagation();
+  const targetId = card.dataset.id;
+  const dragged  = jobs.find(x=>x.id===drag.id);
+  const target   = jobs.find(x=>x.id===targetId);
+  if (!dragged||!target) return;
+  const col = target.status;
+  dragged.status = col;
+  const above  = e.clientY < card.getBoundingClientRect().top + card.getBoundingClientRect().height/2;
+  const colJs  = getOrdered(col,'all','all').filter(x=>x.id!==drag.id);
+  const tIdx   = colJs.findIndex(x=>x.id===targetId);
+  const insAt  = above ? tIdx : tIdx+1;
+  colJs.splice(insAt,0,dragged);
+  colJs.forEach((j,i)=>{ OM[col][j.id]=i; });
+  log(`${drag.id} placed at #${insAt+1} in "${col}" — optimizer adjusting`);
+  reoptAfterDrop(col, drag.id);
+  renderAll();
+  flashReopt(col, drag.id);
+  showToast(`${dragged.well} repositioned — board reoptimized`);
+});
+
+// Column-level drop (empty space)
+document.querySelectorAll('.col-body').forEach(col=>{
+  col.addEventListener('dragover', e=>{
+    if (e.target.closest('.job-card')) return;
+    e.preventDefault();
+    col.classList.add('dv');
+    if (!col.querySelector('.drop-ghost')) {
+      const g=document.createElement('div'); g.className='drop-ghost'; col.appendChild(g);
+    }
+  });
+  col.addEventListener('dragleave', e=>{
+    if (!col.contains(e.relatedTarget)) {
+      col.classList.remove('dv');
+      col.querySelectorAll('.drop-ghost').forEach(g=>g.remove());
+    }
+  });
+  col.addEventListener('drop', e=>{
+    if (e.target.closest('.job-card')) return;
+    e.preventDefault();
+    const colId = col.dataset.col;
+    if (!drag.id) return;
+    const j = jobs.find(x=>x.id===drag.id);
+    if (!j) return;
+    j.status = colId;
+    const colJs = getOrdered(colId,'all','all').filter(x=>x.id!==drag.id);
+    colJs.forEach((x,i)=>{ OM[colId][x.id]=i; });
+    OM[colId][drag.id] = colJs.length;
+    log(`${drag.id} moved to "${colId}" — reoptimizing`);
+    reoptAfterDrop(colId, drag.id);
+    renderAll();
+    flashReopt(colId, drag.id);
+    showToast(`${j.well} moved to ${colId}`);
+  });
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MODALS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.addEventListener('click', e=>{
+  if (e.target.classList.contains('modal-ov')) closeModal(e.target.id);
+  if (e.target.dataset.close) closeModal(e.target.dataset.close);
+});
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape')
+    document.querySelectorAll('.modal-ov:not(.hidden)').forEach(m=>m.classList.add('hidden'));
+});
+
+function populateTeamDropdown() {
+  const sel = document.getElementById('f-team');
+  sel.innerHTML = TEAMS.map(t=>`<option value="${t.id}">Team ${t.name}</option>`).join('');
+}
+
+function updateScorePreview() {
+  const tmp = {
+    prod:   +(document.getElementById('f-prod').value)||0,
+    contrib:+(document.getElementById('f-contrib').value)||0,
+    bp:     +(document.getElementById('f-bp').value)||0,
+    dt:     +(document.getElementById('f-dt').value)||0,
+    dist:   +(document.getElementById('f-dist').value)||0,
+    equip:  document.getElementById('f-equip').value||null
+  };
+  const sc = calcScore(tmp);
+  document.getElementById('sp-tot').textContent  = sc;
+  document.getElementById('sp-tot').style.color  = pColor(sc);
+  document.getElementById('sp-prod').textContent = Math.round(Math.min(40,(tmp.prod/10000)*40));
+  document.getElementById('sp-gc').textContent   = Math.round(Math.min(20,(tmp.contrib/30)*20));
+  document.getElementById('sp-bp').textContent   = Math.round(Math.min(15,(tmp.bp/6)*15));
+  document.getElementById('sp-dt').textContent   = (tmp.prod<GC_AVG&&tmp.dt>15)?10:0;
+}
+
+['f-prod','f-contrib','f-bp','f-dt','f-dist','f-equip'].forEach(id=>{
+  const el=document.getElementById(id);
+  if (el) el.addEventListener('input',updateScorePreview);
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TOAST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+let _tt=null;
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.remove('hidden');
+  clearTimeout(_tt); _tt=setTimeout(()=>t.classList.add('hidden'),3000);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   BOOTSTRAP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+document.getElementById('wklbl').textContent = 'Week: Sat 15 — Thu 20 Mar 2026';
+
+// Populate team filter
+const teamSel = document.getElementById('sel-team');
+TEAMS.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent='Team '+t.name; teamSel.appendChild(o); });
+
+// Filters
+document.getElementById('sel-filter').addEventListener('change',renderAll);
+document.getElementById('sel-team').addEventListener('change',renderAll);
+
+// Reoptimize
+document.getElementById('btn-reopt').addEventListener('click',()=>{
+  fullReopt(); renderAll(); showToast('Full reoptimization complete');
+});
+
+// New job
+document.getElementById('btn-newjob').addEventListener('click',()=>{
+  populateTeamDropdown(); updateScorePreview(); openModal('modal-job');
+});
+document.getElementById('btn-addjob').addEventListener('click',()=>{
+  const id=nextId();
+  jobs.push({
+    id, status:'assigned',
+    well:    document.getElementById('f-well').value||'Well-XX',
+    gc:      document.getElementById('f-gc').value,
+    jt:      document.getElementById('f-jt').value,
+    team:    document.getElementById('f-team').value||TEAMS[0].id,
+    prod:    +(document.getElementById('f-prod').value),
+    contrib: +(document.getElementById('f-contrib').value),
+    bp:      +(document.getElementById('f-bp').value),
+    dt:      +(document.getElementById('f-dt').value),
+    dist:    +(document.getElementById('f-dist').value),
+    equip:   document.getElementById('f-equip').value||null,
+    day:     document.getElementById('f-day').value
+  });
+  closeModal('modal-job');
+  log(`${id} added — reoptimizing assigned column`);
+  renderAll();
+  showToast(`${id} added and board reoptimized`);
+});
+
+// Add team
+document.getElementById('btn-newteam').addEventListener('click',()=>openModal('modal-team'));
+document.getElementById('btn-saveteam').addEventListener('click',()=>{
+  const name  = document.getElementById('t-name').value.trim()||'New Team';
+  const idx   = TEAMS.length;
+  const id    = String.fromCharCode(65+idx);
+  TEAMS.push({id, name, members:+(document.getElementById('t-members').value)||4, av:AV_CLS[idx%AV_CLS.length], base:document.getElementById('t-gc').value});
+  const o=document.createElement('option'); o.value=id; o.textContent='Team '+name;
+  document.getElementById('sel-team').appendChild(o);
+  closeModal('modal-team');
+  renderAll();
+  showToast(`Team ${name} added`);
+});
+
+// Initial render
+renderAll();
+</script>
+</body>
+</html>
